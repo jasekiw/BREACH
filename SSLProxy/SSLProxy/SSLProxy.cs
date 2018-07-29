@@ -1,7 +1,6 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
-using Socket = Chilkat.Socket;
 
 namespace SSLProxy
 {
@@ -16,8 +15,8 @@ namespace SSLProxy
             int responseBytesTotal = 0;
             int sequence = 0, i = 0;
 
-            Socket listenSocket = InitializeSocketLibrary();
-            Socket outboundSocket = InitializeSocketLibrary();
+            MySocket listenSocket = new MySocket("listener");
+            MySocket outboundSocket = new MySocket("outbound");
             File.Delete(PacketRealTimeLog);
 
             // Bind on port 443
@@ -39,8 +38,8 @@ namespace SSLProxy
                     Thread.Sleep(500);
                     listenSocket.Close(10000);
                     outboundSocket.Close(10000);
-                    listenSocket = InitializeSocketLibrary();
-                    outboundSocket = InitializeSocketLibrary();
+                    listenSocket = new MySocket();
+                    outboundSocket = new MySocket();
 
                     if (!listenSocket.BindAndListen(443, 25))
                     {
@@ -52,7 +51,7 @@ namespace SSLProxy
                     Console.WriteLine(" Done!");
                 }
 
-                Chilkat.Socket connectedSocket = null;
+                MySocket connectedSocket = null;
 
                 // Listen to incoming client
                 do
@@ -60,6 +59,7 @@ namespace SSLProxy
                     try
                     {
                         connectedSocket = listenSocket.AcceptNextConnection(6000000);
+                        Console.WriteLine("Accepted Client connection");
                     }
                     catch (System.AccessViolationException e)
                     {
@@ -72,6 +72,7 @@ namespace SSLProxy
 
                 // Connect to outbound target
                 // BLIND SSL Relay (no need to establish a new SSL tunnel)
+                Console.WriteLine("Connecting to Server");
                 if (!outboundSocket.Connect(TargetIP, 443, false, 10000))
                 {
                     Console.WriteLine(outboundSocket.LastErrorText + "\r\n");
@@ -104,6 +105,7 @@ namespace SSLProxy
 
                         try
                         {
+                            Console.WriteLine("Start Receiving bytes from client");
                             if (!connectedSocket.AsyncReceiveBytes())
                             {
                                 Console.WriteLine(connectedSocket.LastErrorText + "\r\n");
@@ -120,17 +122,16 @@ namespace SSLProxy
                     }
 
                     // Request starts here, receive from client
-                    if (receivingClient
-                        && connectedSocket.AsyncReceiveFinished)
+                    if (receivingClient && connectedSocket.AsyncReceiveFinished)
                     {
                         receivingClient = false;
+                        Console.WriteLine("Received Bytes from Client");
                         requestBytes = connectedSocket.AsyncReceivedBytes;
                         if (requestBytes != null && requestBytes.Length > 0)
                         {
                             Console.WriteLine(" >>> rcv: " + responseBytesTotal);
 
-                            if (responseBytesTotal != 0
-                                && File.Exists(PacketRealTimeLog))
+                            if (responseBytesTotal != 0 && File.Exists(PacketRealTimeLog))
                             {
                                 // Since we are detecting a new request and HTTP is synchronous, we now know the previous 
                                 // response has completed, and we measure the aggregated byte count for all its packets
@@ -142,6 +143,7 @@ namespace SSLProxy
 
 
                             // Relay bytes to target server
+                            Console.WriteLine("Sending Bytes to server");
                             if (!outboundSocket.SendBytes(requestBytes))
                             {
                                 Console.WriteLine(connectedSocket.LastErrorText + "\r\n");
@@ -161,6 +163,7 @@ namespace SSLProxy
 
                         try
                         {
+                            Console.WriteLine("Start Receiving Bytes from server");
                             if (!outboundSocket.AsyncReceiveBytes())
                             {
                                 Console.WriteLine("## Error (004) " + outboundSocket.LastErrorText + "\r\n");
@@ -177,10 +180,10 @@ namespace SSLProxy
                     }
 
                     // Write to log file
-                    if (receivingServer
-                        && outboundSocket.AsyncReceiveFinished)
+                    if (receivingServer && outboundSocket.AsyncReceiveFinished)
                     {
                         receivingServer = false;
+                        Console.WriteLine("Received Bytes from Server");
                         responseBytes = outboundSocket.AsyncReceivedBytes;
 
                         if (responseBytes != null && responseBytes.Length > 0)
@@ -198,6 +201,7 @@ namespace SSLProxy
                             responseBytesTotal += responseBytes.Length;
 
                             // Relay to client
+                            Console.WriteLine("Sending bytes back to the client");
                             if (!connectedSocket.SendBytes(responseBytes))
                             {
                                 Console.WriteLine("## Error (005) " + connectedSocket.LastErrorText + "\r\n");
@@ -206,8 +210,7 @@ namespace SSLProxy
                             }
                         }
 
-                        else if (connectedSocket.IsConnected
-                            && !outboundSocket.IsConnected)
+                        else if (connectedSocket.IsConnected && !outboundSocket.IsConnected)
                         {
                             // We lost one socket, kill it with fire
                             connectedSocket.Close(10000);
@@ -217,8 +220,7 @@ namespace SSLProxy
                 }
 
                 // Log for non-Keep-Alive cases (Connection Closed)
-                LogPacketLength(PacketLengthLog, received.ToString(),
-                    FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                LogPacketLength(PacketLengthLog, received.ToString(), FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
 
 
                 //  Close the connection with the client.
