@@ -18,8 +18,7 @@ namespace SSLProxy
             return listenSocket;
         }
 
-        internal static void LogPacketLength(String fileName, String logData,
-            FileMode fm, FileAccess fa, FileShare fs)
+        internal static void LogPacketLength(String fileName, String logData, FileMode fm, FileAccess fa, FileShare fs)
         {
             bool writeCompleted = false;
             do
@@ -43,6 +42,16 @@ namespace SSLProxy
             } while (!writeCompleted);
         }
 
+
+        static void Log(params string[] message)
+        {
+            return;
+            for (int i = 0; i < message.Length; i++)
+            {
+                Console.Write(message[i] + " ");
+            }
+            Console.WriteLine();
+        }
 
     }
 }

@@ -12,6 +12,7 @@ namespace SSLProxy
     {
         private Socket _socket;
         private  ManualResetEvent connectDone = new ManualResetEvent(false);
+        private static ManualResetEvent sendDone = new ManualResetEvent(false);
         private bool _isConnected;
         public bool IsConnected => _isConnected;
 
@@ -36,7 +37,17 @@ namespace SSLProxy
         public bool AsyncReceiveFinished => _asyncReceiveFinished;
         
         private byte[] _asyncReceivedBytes;
-        public byte[] AsyncReceivedBytes => _asyncReceivedBytes;
+
+        public byte[] AsyncReceivedBytes
+        {
+            get
+            {
+                var temp = _asyncReceivedBytes;
+                _asyncReceivedBytes = null;
+                _asyncReceiveFinished = false;
+                return temp;
+            }
+        }
 
         public MySocket(Socket socket, string name)
         {
@@ -132,7 +143,8 @@ namespace SSLProxy
             {
 
                 Send(_socket, bytes);
-                
+                sendDone.WaitOne();
+
                 // Write the response to the console.  
                 //Console.WriteLine("Response received : {0}", response);
                 return true;
@@ -203,11 +215,14 @@ namespace SSLProxy
 
         private void ReceiveCallback(IAsyncResult ar)
         {
-          
-                Console.WriteLine(this.name + " started receiving bytes");
+            try
+            {
+
+
+                Log(this.name + " started receiving bytes");
                 // Retrieve the state object and the client socket   
                 // from the asynchronous state object.  
-                StateObject state = (StateObject)ar.AsyncState;
+                StateObject state = (StateObject) ar.AsyncState;
                 Socket client = state.workSocket;
 
                 // Read data from the remote device.  
@@ -220,21 +235,28 @@ namespace SSLProxy
                     Array.Copy(temp, state.total, temp.Length);
                     Array.Copy(state.buffer, 0, state.total, temp.Length, bytesRead);
 
-//                    Console.WriteLine("BeginReceive Again");
-                // Get the rest of the data.  
-                // inserted large buffer to prevent this.
-                //                    client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
-                    Console.WriteLine(this.name + " finished receiving bytes");
-                    _asyncReceivedBytes = state.total;
-                    _asyncReceiveFinished = true;
-            }
-                else
-                {
-                    Console.WriteLine(this.name + " finished receiving bytes");
+                    //                    Console.WriteLine("BeginReceive Again");
+                    // Get the rest of the data.  
+                    // inserted large buffer to prevent this.
+                    //                    client.BeginReceive(state.buffer, 0, StateObject.BufferSize, 0, ReceiveCallback, state);
+                    Log(this.name + " finished receiving bytes");
                     _asyncReceivedBytes = state.total;
                     _asyncReceiveFinished = true;
                 }
-       
+                else
+                {
+                    Log(this.name + " finished receiving bytes");
+                    _asyncReceivedBytes = state.total;
+                    _asyncReceiveFinished = true;
+                }
+            }
+            catch (Exception e)
+            {
+                _lastErrorText = e.ToString();
+                Console.WriteLine(e.ToString());
+                _isConnected = false;
+            }
+
         }
 
         private void Send(Socket client, byte[] byteData)
@@ -253,7 +275,8 @@ namespace SSLProxy
 
                 // Complete sending the data to the remote device.  
                 int bytesSent = client.EndSend(ar);
-                Console.WriteLine("Sent {0} bytes to server.", bytesSent);
+                sendDone.Set();
+                //Console.WriteLine("Sent {0} bytes to server.", bytesSent);
 
             }
             catch (Exception e)
@@ -265,6 +288,17 @@ namespace SSLProxy
         }
 
 
+        void Log(params string[] message)
+        {
+            return;
+            for (int i = 0; i < message.Length; i++)
+            {
+                Console.Write(message[i] + " ");
+            }
+            Console.WriteLine();
+        }
+
+
     }
 
     public class StateObject
@@ -272,7 +306,7 @@ namespace SSLProxy
         // Client  socket.  
         public Socket workSocket = null;
         // Size of receive buffer.  
-        public const int BufferSize = 8192;
+        public const int BufferSize = 32768;
         // Receive buffer.  
         public byte[] buffer = new byte[BufferSize];
 

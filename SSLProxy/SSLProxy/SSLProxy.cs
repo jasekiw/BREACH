@@ -105,7 +105,7 @@ namespace SSLProxy
 
                         try
                         {
-                            Console.WriteLine("Start Receiving bytes from client");
+                            Log("Start Receiving bytes from client");
                             if (!connectedSocket.AsyncReceiveBytes())
                             {
                                 Console.WriteLine(connectedSocket.LastErrorText + "\r\n");
@@ -125,7 +125,7 @@ namespace SSLProxy
                     if (receivingClient && connectedSocket.AsyncReceiveFinished)
                     {
                         receivingClient = false;
-                        Console.WriteLine("Received Bytes from Client");
+                        Log("Received Bytes from Client");
                         requestBytes = connectedSocket.AsyncReceivedBytes;
                         if (requestBytes != null && requestBytes.Length > 0)
                         {
@@ -143,7 +143,7 @@ namespace SSLProxy
 
 
                             // Relay bytes to target server
-                            Console.WriteLine("Sending Bytes to server");
+                            //Console.WriteLine("Sending Bytes to server");
                             if (!outboundSocket.SendBytes(requestBytes))
                             {
                                 Console.WriteLine(connectedSocket.LastErrorText + "\r\n");
@@ -163,7 +163,7 @@ namespace SSLProxy
 
                         try
                         {
-                            Console.WriteLine("Start Receiving Bytes from server");
+                            Log("Start Receiving Bytes from server");
                             if (!outboundSocket.AsyncReceiveBytes())
                             {
                                 Console.WriteLine("## Error (004) " + outboundSocket.LastErrorText + "\r\n");
@@ -183,7 +183,7 @@ namespace SSLProxy
                     if (receivingServer && outboundSocket.AsyncReceiveFinished)
                     {
                         receivingServer = false;
-                        Console.WriteLine("Received Bytes from Server");
+                        Log("Received Bytes from Server");
                         responseBytes = outboundSocket.AsyncReceivedBytes;
 
                         if (responseBytes != null && responseBytes.Length > 0)
@@ -201,7 +201,7 @@ namespace SSLProxy
                             responseBytesTotal += responseBytes.Length;
 
                             // Relay to client
-                            Console.WriteLine("Sending bytes back to the client");
+                            //Console.WriteLine("Sending bytes back to the client");
                             if (!connectedSocket.SendBytes(responseBytes))
                             {
                                 Console.WriteLine("## Error (005) " + connectedSocket.LastErrorText + "\r\n");
@@ -217,6 +217,7 @@ namespace SSLProxy
                             break;
                         }
                     }
+
                 }
 
                 // Log for non-Keep-Alive cases (Connection Closed)
@@ -230,6 +231,7 @@ namespace SSLProxy
             }
         }
 
+        
 
     }
 }
