@@ -62,7 +62,7 @@ namespace BREACHBasic
                 return null;
             }
 
-            webRequest.Timeout = 15 * 1000;
+            webRequest.Timeout = 60 * 1000;
             webRequest.Headers["Cache-Control"] = "no-cache";
             webRequest.Headers["Accept-Encoding"] = "gzip,deflate";
             webRequest.Headers["Pragma"] = "no-cache";
