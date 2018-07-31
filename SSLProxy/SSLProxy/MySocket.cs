@@ -22,14 +22,14 @@ namespace SSLProxy
 
         public int MaxReadIdleMs
         {
-            get => _socket.ReceiveTimeout;
-            set => _socket.ReceiveTimeout = value;
+            get { return _socket.ReceiveTimeout; }
+            set { _socket.ReceiveTimeout = value; }
         }
 
         public int MaxSendIdleMs
         {
-            get => _socket.SendTimeout;
-            set => _socket.SendTimeout = value;
+            get { return _socket.SendTimeout; }
+            set { _socket.SendTimeout = value; }
         }
 
 
