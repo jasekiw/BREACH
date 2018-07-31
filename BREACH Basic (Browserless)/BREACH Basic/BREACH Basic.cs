@@ -192,7 +192,7 @@ namespace BREACHBasic
                     padding += "~";
                 }
             }
-
+            
 
             HttpGet(TargetURL + currentCanary + guess + padding + "@");
             int? bytes1 = ReadBytes();
